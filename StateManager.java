@@ -27,8 +27,10 @@ public class StateManager {
         return activeStateTime;
     }
 
+    // sole function used for switching between states
     public boolean tryEnterState(StateType stateType) {
-        if (stateMap.get(stateType).canEnter() && getActiveState().canBeOverridden()) {
+        // only don't allow transition if active state is not done and cannot be overriden
+        if (stateMap.get(stateType).canEnter() && (getActiveState().isDone() || getActiveState().canBeOverridden())) {
             activeStateType = stateType;
             activeStateTime = 0;
             return true;
