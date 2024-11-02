@@ -1,49 +1,56 @@
+package stateMachine;
 import java.util.HashMap;
 
-public class StateManager {
+public class StateManager<StateType extends Enum<StateType>> {
 
-    public enum StateType {
-        NOTHING, RUN, IDLE, JUMP, FALL
-    }
-
-    private HashMap<StateType, State> stateMap;
+    private HashMap<StateType, BaseState<StateType>> stateMap;
+    private StateType defaultStateType;
     private StateType activeStateType;
-    private int activeStateTime;
 
-    public StateManager() {
+    public StateManager(StateType defaultStateType) {
+        this.defaultStateType = defaultStateType;
+        this.activeStateType = defaultStateType;
         this.stateMap = new HashMap<>();
-        tryEnterState(StateType.NOTHING);
     }
 
-    public void addState(StateType stateType, State state) {
+    // forces state and state manager to have same enum
+    public void addState(StateType stateType, BaseState<StateType> state) {
         stateMap.put(stateType, state);
     }
 
-    public State getActiveState() {
-        return stateMap.get(activeStateType);
+    // have to call this function bfore running any state logic
+    public void setupStates(Object...args) {
+        for (BaseState<StateType> state : stateMap.values()) {
+            state.setup(args);
+        }
     }
 
-    public int getActiveStateTime() {
-        return activeStateTime;
+    public BaseState<StateType> getActiveState() {
+        return stateMap.get(activeStateType);
     }
 
     // sole function used for switching between states
     public boolean tryEnterState(StateType stateType) {
+        System.out.println("try enter " + stateType);
         // only don't allow transition if active state is not done and cannot be overriden
         if (stateMap.get(stateType).canEnter() && (getActiveState().isDone() || getActiveState().canBeOverridden())) {
+            System.out.println("entering");
+            getActiveState().resetTime();
             activeStateType = stateType;
-            activeStateTime = 0;
             return true;
         }
+        System.out.println("could not enter");
         return false;
     }
 
-    public void update() {
+    public void update(double dt) {
         getActiveState().execute();
-        activeStateTime++;
+        getActiveState().incrementTime(dt);
+
         if (getActiveState().isDone()) {
+            System.out.println(getActiveState() + " is done");
             boolean canEnterState = tryEnterState(getActiveState().getNextStateType());
-            if (!canEnterState) tryEnterState(StateType.NOTHING);
+            if (!canEnterState) tryEnterState(defaultStateType);
         }
     }
 }
